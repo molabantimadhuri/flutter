@@ -1,0 +1,104 @@
+ Create a Provider that provides a list of strings and a function to add new strings to the list. Display the list in another widget.
+Source Code:
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// 1️⃣ Provider class that manages a list of strings
+class StringListProvider with ChangeNotifier {
+  final List<String> _items = [];
+
+  List<String> get items => _items;
+
+  void addItem(String newItem) {
+    _items.add(newItem);
+    notifyListeners(); // Notify UI to rebuild
+  }
+}
+
+void main() {
+  runApp(
+    // 2️⃣ Provide the StringListProvider to the widget tree
+    ChangeNotifierProvider(
+      create: (context) => StringListProvider(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: StringListScreen(),
+    );
+  }
+}
+
+// 3️⃣ Main screen
+class StringListScreen extends StatelessWidget {
+  const StringListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final textController = TextEditingController();
+    final stringListProvider = Provider.of<StringListProvider>(context, listen: false);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Provider String List Example')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: textController,
+              decoration: const InputDecoration(
+                labelText: 'Enter a new string',
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                if (textController.text.isNotEmpty) {
+                  stringListProvider.addItem(textController.text);
+                  textController.clear();
+                }
+              },
+              child: const Text('Add String'),
+            ),
+            const SizedBox(height: 20),
+            const Expanded(child: StringListDisplay()), // Display the list
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 4️⃣ Widget that listens to list changes
+class StringListDisplay extends StatelessWidget {
+  const StringListDisplay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = context.watch<StringListProvider>().items;
+
+    if (items.isEmpty) {
+      return const Center(child: Text('No items added yet.'));
+    }
+
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index) => ListTile(
+        leading: const Icon(Icons.list),
+        title: Text(items[index]),
+      ),
+    );
+  }
+}
