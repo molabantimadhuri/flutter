@@ -1,0 +1,63 @@
+Create the form which consists firstName, lastName, phoneNumber, email, and all scenarios mentioned below:-
+
+● firstName and lastName should be a minimum character of 5 and a maximum of 15.
+● Add proper validation for email.
+● phoneNumber should be 10 digits and valid.
+
+How will you achieve this problem statement?
+
+Hint 1:- Only use FormBuilderTextField. 
+SOURCE CODE:
+import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+
+class RegistrationForm extends StatefulWidget {
+  @override
+  _RegistrationFormState createState() => _RegistrationFormState();
+}
+
+class _RegistrationFormState extends State<RegistrationForm> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Registration Form")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FormBuilder(
+          key: _formKey,
+          child: Column(
+            children: [
+              // First Name
+              FormBuilderTextField(
+                name: 'firstName',
+                decoration: InputDecoration(labelText: 'First Name'),
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.required(errorText: "Required"),
+                  FormBuilderValidators.minLength(5, errorText: "Min 5 chars"),
+                  FormBuilderValidators.maxLength(15, errorText: "Max 15 chars"),
+                ]),
+              ),
+
+              // Last Name
+              FormBuilderTextField(
+                name: 'lastName',
+                decoration: InputDecoration(labelText: 'Last Name'),
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.required(errorText: "Required"),
+                  FormBuilderValidators.minLength(5, errorText: "Min 5 chars"),
+                  FormBuilderValidators.maxLength(15, errorText: "Max 15 chars"),
+                ]),
+              ),
+
+              // Phone Number
+              FormBuilderTextField(
+                name: 'phoneNumber',
+                decoration: InputDecoration(labelText: 'Phone Number'),
+                keyboardType: TextInputType.phone,
+                validator: FormBuilderValidators.compose([
+                  FormBuilderValidators.required(errorText: "Required"),
+                  FormBuilderValidators.numeric(errorText: "Only digits allowed"),
+                  FormBuilderValidators.equalLength(10, errorText: "Must be 10 digits"
