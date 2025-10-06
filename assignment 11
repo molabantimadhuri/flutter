@@ -1,0 +1,29 @@
+class ResultActivity : AppCompatActivity() {
+
+    private val trueAnswers = 6
+    private val wrongAnswers = 0
+    private val totalQuestions = 6
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_result)
+
+        val tvScore: TextView = findViewById(R.id.tvScore)
+        val tvStatus: TextView = findViewById(R.id.tvStatus)
+        val imgTrophy: ImageView = findViewById(R.id.imgTrophy)
+
+        val percentage = (trueAnswers * 100) / totalQuestions
+
+        tvScore.text = "Total: $totalQuestions\nCorrect: $trueAnswers\nWrong: $wrongAnswers\nScore: $percentage%"
+
+        if (percentage >= 50) {
+            tvStatus.text = "Congratulations! You are Passed 🎉"
+            tvStatus.setTextColor(Color.GREEN)
+            imgTrophy.visibility = View.VISIBLE
+        } else {
+            tvStatus.text = "Oops! You Failed 😔"
+            tvStatus.setTextColor(Color.RED)
+            imgTrophy.visibility = View.GONE
+        }
+    }
+}
