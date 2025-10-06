@@ -1,0 +1,96 @@
+ Create a Flutter app with two screens, each displaying a numerical value in its user interface. Upon pressing a floating action button on the home page, the value of the number will increase for both screens.
+Add navigation to switch between the two screens to observe the results
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5
+SOURCE CODE:
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// State management class
+class NumberProvider with ChangeNotifier {
+  int _number = 0;
+
+  int get number => _number;
+
+  void increment() {
+    _number++;
+    notifyListeners(); // Notify all listeners
+  }
+}
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => NumberProvider(),
+      child: MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Two Screen Counter',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: HomeScreen(),
+    );
+  }
+}
+
+// First Screen
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    int number = context.watch<NumberProvider>().number;
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Home Screen")),
+      body: Center(
+        child: Text(
+          "Number: $number",
+          style: TextStyle(fontSize: 32),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.add),
+        onPressed: () => context.read<NumberProvider>().increment(),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            ListTile(
+              title: Text("Go to Second Screen"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SecondScreen()),
+                );
+              },
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Second Screen
+class SecondScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    int number = context.watch<NumberProvider>().number;
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Second Screen")),
+      body: Center(
+        child: Text(
+          "Number: $number",
+          style: TextStyle(fontSize: 32),
+        ),
+      ),
+    );
+  }
+}
