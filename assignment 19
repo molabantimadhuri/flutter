@@ -1,0 +1,76 @@
+ You have two buttons A & B . When you click on the A button the image will be shown and you click on the B button then your name, phone number, and email will be shown. How will you achieve this problem statement?
+
+Hint 1:- Add the flag to show the different-2 data on click of buttons.
+
+Hint 2:- Add text in the column for showing the name, phone number, and email.
+
+Hint 3:- Add imageView to show the image.
+
+Hint 4:- Add the image to the assets folder.
+
+SOURCE CODE:
+import 'package:flutter/material.dart';
+
+class ShowDataApp extends StatefulWidget {
+  @override
+  _ShowDataAppState createState() => _ShowDataAppState();
+}
+
+class _ShowDataAppState extends State<ShowDataApp> {
+  int flag = 0; // 0 = nothing, 1 = image, 2 = text
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Show Data Example")),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      flag = 1; // show image
+                    });
+                  },
+                  child: Text("Button A"),
+                ),
+                SizedBox(width: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      flag = 2; // show text
+                    });
+                  },
+                  child: Text("Button B"),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 30),
+
+            // Conditional Rendering
+            if (flag == 1) ...[
+              Image.asset("assets/my_image.png", width: 150, height: 150),
+            ] else if (flag == 2) ...[
+              Column(
+                children: [
+                  Text("Name: John Doe",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text("Phone: +91 9876543210",
+                      style: TextStyle(fontSize: 18)),
+                  Text("Email: john.doe@example.com",
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+}
