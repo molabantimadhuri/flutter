@@ -1,0 +1,74 @@
+ Create a simple TextFormField that displays a label and saves the user input to a variable.
+Source Code:
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'TextFormField Example',
+      home: TextFieldExample(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class TextFieldExample extends StatefulWidget {
+  @override
+  State<TextFieldExample> createState() => _TextFieldExampleState();
+}
+
+class _TextFieldExampleState extends State<TextFieldExample> {
+  // Controller to handle text input
+  final TextEditingController _textController = TextEditingController();
+
+  // Variable to store the saved value
+  String savedText = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Simple TextFormField Example')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Step 3: TextFormField with label
+            TextFormField(
+              controller: _textController,
+              decoration: InputDecoration(
+                labelText: 'Enter your name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Button to save input
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  savedText = _textController.text;
+                });
+              },
+              child: Text('Save'),
+            ),
+
+            SizedBox(height: 20),
+
+            // Display saved text
+            Text(
+              savedText.isEmpty
+                  ? 'No input saved yet.'
+                  : 'Saved Input: $savedText',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
