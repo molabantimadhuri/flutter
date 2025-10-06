@@ -1,0 +1,76 @@
+Create a simple Provider that provides a counter value and a button to increment the counter. Display the counter value in another widget.
+Source Code:
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// The ChangeNotifier class manages the counter value
+class CounterProvider with ChangeNotifier {
+  int _count = 0;
+
+  int get count => _count;
+
+  void increment() {
+    _count++;
+    notifyListeners(); // Notify listeners when value changes
+  }
+}
+
+void main() {
+  runApp(
+    // Provide the CounterProvider to the widget tree
+    ChangeNotifierProvider(
+      create: (context) => CounterProvider(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: CounterScreen(),
+    );
+  }
+}
+
+// Main screen that has a button and displays the counter
+class CounterScreen extends StatelessWidget {
+  const CounterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final counterProvider = Provider.of<CounterProvider>(context, listen: false);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Provider Counter Example')),
+      body: const Center(
+        child: CounterDisplay(), // Displays the counter value
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: counterProvider.increment,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+// Separate widget that listens to counter changes
+class CounterDisplay extends StatelessWidget {
+  const CounterDisplay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = context.watch<CounterProvider>().count; // rebuilds on change
+    return Text(
+      'Counter: $count',
+      style: const TextStyle(fontSize: 30),
+    );
+  }
+}
