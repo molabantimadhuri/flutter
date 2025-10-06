@@ -1,0 +1,413 @@
+Question 01: You have to develop a cake-ordering application that allows users to place orders for cakes and view them on the admin panel. The application will have the following features:
+
+User-friendly interface for placing cake orders, including options for customizing the cake such as size.
+Securing authentication for the users to place orders and for the admin to view them.
+Creating the Admin panel to view all orders placed by users and update the status of orders.
+Making use of Firebase to store order data.
+Note: This final project will provide you with the opportunity to apply the concepts and techniques covered throughout the course to create a functional, production-ready application. This project will include the use of advanced features like Firebase integration, push notifications, and user authentication.
+
+The potential UI design of the admin app and the User app is given as follows:
+
+ 
+
+1) Admin Panel UI Screenshot:
+
+SOURCE CODE:
+1 — High level architecture & features
+
+Flutter apps: User app and Admin app (can be same app with role-based screens).
+
+Firebase services:
+
+Authentication (Firebase Auth — email/password or Google)
+
+Firestore (orders collection)
+
+Cloud Functions (server side notifications)
+
+FCM (push notifications)
+
+(Optional) Firebase Storage (images)
+
+Roles:
+
+User: can place orders, view their orders + status updates
+
+Admin: can view all orders, change status, add tracking notes
+
+Order flow:
+
+User places an order → document created in orders/ → admin sees it on admin panel → admin updates status (Received → Preparing → Out for delivery → Delivered) → cloud function sends push to user + update in Firestore.
+
+2 — Firestore data model (recommended)
+
+Collection: orders
+Document ID: auto or custom (order_XXXXXXXX)
+{
+  "orderId": "1234542m5322",      // string
+  "userId": "uid_abc123",         // uid of user
+  "userName": "Alice",
+  "userEmail": "alice@example.com",
+  "cake": {
+    "flavour": "Chocolate",
+    "size": "8 inch",
+    "message": "Happy Birthday!",
+    "imageUrl": null
+  },
+  "price": 1500,                  // number (INR / cents)
+  "createdAt": "<timestamp>",
+  "status": "out_for_delivery",   // one of: pending, confirmed, preparing, out_for_delivery, delivered, cancelled
+  "statusIndex": 3,               // numeric stage 0..n for UI
+  "notes": "Leave at reception",
+  "fcmToken": "<user device token>" // optional: for push targeting
+}
+3 — Firestore security rules (basic)
+
+Allow users to create orders and read only their own orders; allow admins to read/write all orders. You must have a way to mark an admin (custom claim or admin collection).
+
+Example (use custom claims or an admins collection):
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /orders/{orderId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      allow update, delete: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+      allow write: if false; // create via admin console or cloud function only
+    }
+  }
+}
+
+
+Prefer using Firebase Admin SDK to set admin custom claims for security-critical roles.
+
+4 — Firebase setup checklist
+
+Create Firebase project.
+
+Add Android/iOS app, download config files (google-services.json / GoogleService-Info.plist).
+
+Enable Firestore.
+
+Enable Firebase Auth (Email/Password and optionally Google).
+
+Enable Cloud Messaging (FCM).
+
+(Optional) Enable Firebase Storage if uploading cake images.
+
+Deploy Cloud Functions (for sending push notifications).
+
+Add admins by writing documents to admins/{uid} or set custom claims.
+
+5 — Flutter dependencies (pubspec.yaml)
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^2.0.0
+  firebase_auth: ^4.0.0
+  cloud_firestore: ^4.0.0
+  firebase_messaging: ^14.0.0
+  provider: ^6.0.0
+
+
+(Use the latest compatible versions for your setup.)
+
+6 — User: Place an order (example Dart)
+
+This demonstrates creating an order doc in Firestore and saving the user's FCM token (so admin updates can trigger push).
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+Future<void> placeOrder({
+  required String flavour,
+  required String size,
+  required String message,
+  required double price,
+}) async {
+  final user = FirebaseAuth.instance.currentUser!;
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+
+  final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+  final orderData = {
+    'orderId': orderRef.id,
+    'userId': user.uid,
+    'userName': user.displayName ?? '',
+    'userEmail': user.email ?? '',
+    'cake': {
+      'flavour': flavour,
+      'size': size,
+      'message': message,
+    },
+    'price': price,
+    'createdAt': FieldValue.serverTimestamp(),
+    'status': 'pending',
+    'statusIndex': 0,
+    'notes': '',
+    'fcmToken': fcmToken,
+  };
+
+  await orderRef.set(orderData);
+}
+
+7 — Admin panel: list orders & update status (Flutter)
+
+Below is a self-contained AdminOrdersScreen widget (uses Firestore stream) that renders a card like your screenshot and allows status updates.
+
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class AdminOrdersScreen extends StatelessWidget {
+  final List<String> stages = [
+    'pending',
+    'confirmed',
+    'preparing',
+    'out_for_delivery',
+    'delivered'
+  ];
+
+  Color stageColor(int index, int currentIndex) =>
+      index <= currentIndex ? Colors.green : Colors.white;
+
+  @override
+  Widget build(BuildContext context) {
+    final ordersQuery = FirebaseFirestore.instance
+        .collection('orders')
+        .orderBy('createdAt', descending: true);
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Admin Panel'), backgroundColor: Color(0xFFe91e63)),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: ordersQuery.snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) return Center(child: Text('No orders yet'));
+
+          return ListView.builder(
+            padding: EdgeInsets.all(12),
+            itemCount: docs.length,
+            itemBuilder: (context, i) {
+              final data = docs[i].data() as Map<String, dynamic>;
+              final statusIndex = (data['statusIndex'] ?? 0) as int;
+              final orderId = data['orderId'] ?? docs[i].id;
+              final statusLabel = data['status'] ?? 'pending';
+
+              return Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 6,
+                margin: EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFff4d7e), // pink card color similar to screenshot
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      // Left column with order id
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Order Id:', style: TextStyle(color: Colors.white, fontSize: 18)),
+                            SizedBox(height: 6),
+                            Text(orderId,
+                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Right column with status and small blocks
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('Status: ${_labelForStatus(statusLabel)}',
+                              style: TextStyle(color: Colors.white, fontSize: 16)),
+                          SizedBox(height: 8),
+                          Row(
+                            children: List.generate(4, (idx) {
+                              // show 4 squares like screenshot; map them to stage indices 1..4
+                              final squareIndex = idx; // 0..3
+                              final isActive = squareIndex <= statusIndex - 1;
+                              return Container(
+                                width: 32,
+                                height: 32,
+                                margin: EdgeInsets.only(left: 8),
+                                decoration: BoxDecoration(
+                                  color: isActive ? Colors.green : Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              );
+                            }),
+                          ),
+                          SizedBox(height: 8),
+
+                          // Buttons to advance/reverse status
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.arrow_back, color: Colors.white),
+                                onPressed: statusIndex > 0 ? () => _updateStatus(docs[i].id, statusIndex - 1) : null,
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.arrow_forward, color: Colors.white),
+                                onPressed: statusIndex < stages.length - 1 ? () => _updateStatus(docs[i].id, statusIndex + 1) : null,
+                              ),
+                            ],
+                          )
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  String _labelForStatus(String status) {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'confirmed': return 'Confirmed';
+      case 'preparing': return 'Preparing';
+      case 'out_for_delivery': return 'Out for delivery';
+      case 'delivered': return 'Delivered';
+      default: return status;
+    }
+  }
+
+  Future<void> _updateStatus(String docId, int newIndex) async {
+    final stages = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
+    final newStatus = stages[newIndex];
+    await FirebaseFirestore.instance.collection('orders').doc(docId).update({
+      'status': newStatus,
+      'statusIndex': newIndex
+    });
+    // Cloud Function can pick up this change to send notification
+  }
+}
+
+
+Notes:
+
+The 4 small squares in your screenshot map to steps; you can adapt the count and mapping to your actual workflow.
+
+Use a statusIndex integer to drive UI easily.
+
+8 — Cloud Function: send push to user on status change
+
+Use a Firestore trigger to send an FCM notification when orders/{orderId} status changes. Example Node.js function:
+
+// index.js (Cloud Functions)
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
+
+exports.onOrderStatusChanged = functions.firestore
+  .document('orders/{orderId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return null;
+
+    if (before.status === after.status) return null; // no change
+
+    const fcmToken = after.fcmToken;
+    if (!fcmToken) return null;
+
+    const payload = {
+      notification: {
+        title: 'Order status updated',
+        body: `Your order ${after.orderId} is now ${after.status}`,
+      },
+      data: {
+        orderId: after.orderId,
+        status: after.status,
+      }
+    };
+
+    try {
+      await admin.messaging().sendToDevice(fcmToken, payload);
+      console.log('Notification sent to', fcmToken);
+    } catch (err) {
+      console.error('Error sending notification:', err);
+    }
+    return null;
+  });
+
+
+Deploy with firebase deploy --only functions.
+
+9 — FCM setup in Flutter (to get token and receive messages)
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+void initFCM() async {
+  final messaging = FirebaseMessaging.instance;
+  // Request permission (iOS)
+  NotificationSettings settings = await messaging.requestPermission();
+  print('User granted permission: ${settings.authorizationStatus}');
+  // Get token
+  String? token = await messaging.getToken();
+  print('FCM token: $token');
+  // Handle foreground messages
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    // show an in-app dialog or snackbar
+  });
+}
+
+
+Save token in user's order document as shown earlier.
+
+10 — Additional production tips
+
+Use FieldValue.serverTimestamp() to save createdAt.
+
+Use Firestore indexes if you sort queries.
+
+For admin authentication, protect admin accounts via custom claim or admins collection and secure rules accordingly.
+
+Consider audit log collection order_history each time status changed (with timestamp & user).
+
+Validate inputs on both client and server; don't trust client for price and inventory checks.
+
+If you need emailing receipts, add SendGrid or similar via cloud function.
+
+11 — UX suggestions (matching your screenshot)
+
+Pink AppBar and card background (#ff4d7e or similar).
+
+Left: Order Id and details (font white, bigger).
+
+Right: Status text and small square indicators (green for past/current, white for remaining).
+
+Provide quick status-change buttons (advance/reverse).
+
+Show list of orders in a scrollable ListView (admin screenshot shows one card at top with big blank area below — ListView will naturally scroll).
+
+12 — What I’ve delivered here
+
+Full plan and recommended Firestore schema
+
+Security rules sketch
+
+Flutter code for:
+
+placing order (user)
+
+admin screen for viewing & updating orders (UI similar to screenshot)
+
+FCM integration skeleton
+
+Cloud Function example for status-change notification.
