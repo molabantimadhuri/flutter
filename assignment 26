@@ -1,0 +1,149 @@
+Question 2: Create an alertDialog form with name, last name, email, and phone number and store all data in shared preferences and show it in UI after submitting the data. What will be your approach to solving this problem statement?
+
+Hint 1:- Use the alert dialog box and textformfield.
+
+Hint 2:- Use the shared preferences library to store the data of all fields.
+SOurce Code:
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.3.0
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'AlertDialog Form Example',
+      home: UserInfoScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class UserInfoScreen extends StatefulWidget {
+  @override
+  State<UserInfoScreen> createState() => _UserInfoScreenState();
+}
+
+class _UserInfoScreenState extends State<UserInfoScreen> {
+  // Variables to store user data
+  String? name;
+  String? lastName;
+  String? email;
+  String? phone;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDataFromPrefs();
+  }
+
+  // Hint 2: Load data from Shared Preferences
+  Future<void> _loadDataFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      name = prefs.getString('name');
+      lastName = prefs.getString('lastName');
+      email = prefs.getString('email');
+      phone = prefs.getString('phone');
+    });
+  }
+
+  // Show the AlertDialog with form fields
+  Future<void> _showInputDialog() async {
+    final nameController = TextEditingController();
+    final lastNameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Enter Your Details'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Hint 1: Use TextFormField inside AlertDialog
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'First Name'),
+                ),
+                TextField(
+                  controller: lastNameController,
+                  decoration: InputDecoration(labelText: 'Last Name'),
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'Email'),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: InputDecoration(labelText: 'Phone Number'),
+                  keyboardType: TextInputType.phone,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              child: Text('Submit'),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('name', nameController.text);
+                await prefs.setString('lastName', lastNameController.text);
+                await prefs.setString('email', emailController.text);
+                await prefs.setString('phone', phoneController.text);
+
+                Navigator.pop(context); // Close the dialog
+                _loadDataFromPrefs(); // Refresh UI
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('User Information')),
+      body: Center(
+        child: name == null
+            ? Text(
+                'No data available.\nTap the button to enter details.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('First Name: $name', style: TextStyle(fontSize: 20)),
+                    Text('Last Name: $lastName', style: TextStyle(fontSize: 20)),
+                    Text('Email: $email', style: TextStyle(fontSize: 20)),
+                    Text('Phone: $phone', style: TextStyle(fontSize: 20)),
+                  ],
+                ),
+              ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showInputDialog,
+        child: Icon(Icons.add),
+        tooltip: 'Add User Info',
+      ),
+    );
+  }
+}
