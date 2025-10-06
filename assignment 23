@@ -1,0 +1,92 @@
+ Build a Flutter application with two screens, "About" and "Home". Use a dedicated routing class and allow the background color of the Scaffold and AppBar in the About screen to be set from the Home screen.
+SOURCE CODE:
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+// Routing Class
+class Routes {
+  static const String home = '/';
+  static const String about = '/about';
+
+  static Route<dynamic> generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case home:
+        return MaterialPageRoute(builder: (_) => HomeScreen());
+      case about:
+        final args = settings.arguments as Color?;
+        return MaterialPageRoute(
+            builder: (_) => AboutScreen(backgroundColor: args ?? Colors.white));
+      default:
+        return MaterialPageRoute(
+            builder: (_) => Scaffold(
+                  body: Center(child: Text("No route defined for ${settings.name}")),
+                ));
+    }
+  }
+}
+
+// Main App
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Routing Example',
+      initialRoute: Routes.home,
+      onGenerateRoute: Routes.generateRoute,
+    );
+  }
+}
+
+// Home Screen
+class HomeScreen extends StatelessWidget {
+  final Color selectedColor = Colors.teal; // Example chosen color
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Home Screen"),
+        backgroundColor: Colors.blue,
+      ),
+      body: Center(
+        child: ElevatedButton(
+          child: Text("Go to About Screen"),
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              Routes.about,
+              arguments: selectedColor, // pass color to About screen
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// About Screen
+class AboutScreen extends StatelessWidget {
+  final Color backgroundColor;
+
+  const AboutScreen({Key? key, required this.backgroundColor}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("About Screen"),
+        backgroundColor: backgroundColor, // dynamic color
+      ),
+      backgroundColor: backgroundColor, // dynamic color
+      body: Center(
+        child: Text(
+          "This is the About Screen",
+          style: TextStyle(fontSize: 24, color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
